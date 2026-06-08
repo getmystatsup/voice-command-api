@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     groq_model: str = "llama-3.1-8b-instant"
     groq_transcription_model: str = "whisper-large-v3-turbo"
     request_timeout_seconds: float = 45.0
+    allowed_origin_regex: str | None = r"^https://.*\.app\.github\.dev$"
     allowed_origins: Annotated[list[str], NoDecode] = Field(
         default_factory=lambda: ["http://localhost:5173", "http://127.0.0.1:5173"]
     )

@@ -1,0 +1,53 @@
+Backend spec — Voice Command API
+Entry point
+
+POST /instruction — receives a plain-text transcription and calls the Groq API to extract intent and parameters. Must return a JSON that identifies which endpoint to call and with what arguments. The frontend will use this response to make the follow-up request.
+
+Task endpoints (in-memory storage only — no database)
+
+GET /tasks — returns the full list of tasks
+POST /tasks — creates a new task (requires title, optional done field, defaults to false)
+PUT /tasks/<int:task_id> — replaces a task entirely
+PATCH /tasks/<int:task_id> — marks a task as done or updates the title
+DELETE /tasks/<int:task_id> — deletes a task by ID
+
+Storage Use a module-level list as your data store. Each task is a dict with id, title, and done. No database, no file system.
+Groq integration Use the Groq API (model: llama3-8b-8192 or similar) from your /instruction endpoint. The system prompt must instruct the LLM to respond only with a JSON object in this exact format:
+json{
+  "endpoint": "/tasks",
+  "method": "POST",
+  "params": { "title": "Buy groceries" }
+}
+The LLM must never return free text — only that JSON. Your prompt engineering is what makes this work.
+
+Setup
+
+Create a virtual environment and install FastAPI, Uvicorn, and the Groq Python SDK
+Store your Groq API key in a .env file — never commit it to the repository
+Configure CORS so the frontend can communicate with your API
+
+In-memory storage
+
+Declare a module-level list called tasks to serve as your data store
+Each task must have id (integer), title (string), and done (boolean, default false)
+
+Task endpoints
+
+GET /tasks — returns all tasks as a JSON array
+POST /tasks — creates a task from the request body and appends it to the list; returns the created task with its assigned ID
+PUT /tasks/<task_id> — replaces the full task object for the given ID
+PATCH /tasks/<task_id> — partially updates a task (title and/or done status)
+DELETE /tasks/<task_id> — removes the task with the given ID; returns a confirmation message
+
+Instruction endpoint
+
+POST /instruction — receives a JSON body with a transcription field (plain text)
+Calls the Groq API with an appropriate system prompt that forces the LLM to respond only with a structured JSON object indicating endpoint, method, and params
+Returns that JSON directly to the frontend
+
+End-to-end wiring
+
+Using the response from /instruction, the frontend calls the correct task endpoint automatically — verify this works for at least: create, list, update, and delete actions spoken aloud
+
+⚠️ IMPORTANT: Do not use a database. All data must live in a Python list in memory. The list resets every time the server restarts — that is expected behavior for this project.
+⚠️ IMPORTANT: The /instruction endpoint must not contain hardcoded intent-matching logic (no if "add" in text). All routing decisions must come from the LLM response.You said: Can you also change this screen into text to copy and paste?

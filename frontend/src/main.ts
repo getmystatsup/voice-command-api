@@ -519,12 +519,32 @@ function inferAudioFilename(mimeType: string): string {
 
 function normalizeBaseUrl(value: string): string {
   const trimmed = value.trim()
+  const host = window.location.hostname
+  const isCodespacesPreview = host.endsWith('.app.github.dev')
 
-  if (!trimmed) {
-    throw new Error('Missing VITE_API_BASE_URL. Add it to frontend/.env.')
+  if (trimmed && isCodespacesPreview) {
+    // If an env file still points to localhost/127.0.0.1, rewrite it for preview mode.
+    try {
+      const parsed = new URL(trimmed)
+      if (parsed.hostname === '127.0.0.1' || parsed.hostname === 'localhost') {
+        return `${window.location.protocol}//${host.replace(/-\d+\.app\.github\.dev$/, '-8000.app.github.dev')}`
+      }
+    } catch {
+      // Ignore malformed URL here and fall through to existing behavior.
+    }
   }
 
-  return trimmed.replace(/\/+$/, '')
+  if (trimmed) {
+    return trimmed.replace(/\/+$/, '')
+  }
+
+  // Codespaces preview host format: <name>-5173.app.github.dev.
+  if (host.endsWith('.app.github.dev')) {
+    return `${window.location.protocol}//${host.replace(/-\d+\.app\.github\.dev$/, '-8000.app.github.dev')}`
+  }
+
+  // Local fallback for standard dev runs.
+  return `${window.location.protocol}//${window.location.hostname}:8000`
 }
 
 function stringifyData(data: unknown): string {
